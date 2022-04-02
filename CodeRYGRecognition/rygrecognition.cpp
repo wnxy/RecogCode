@@ -72,7 +72,7 @@ int loadframe(uint8_t* yuvInput, FILE* hInputYUVFile, uint32_t frmIdx, uint32_t 
 int openfile()
 {
 	errno_t err;
-	err = fopen_s(&infp, "20220319124222&1920&1080&.yuv", "rb");
+	err = fopen_s(&infp, "20220319121958&1920&1080&.yuv", "rb");
 	if (!infp)
 	{
 		printf("open in file failed\n");
@@ -248,7 +248,11 @@ int testU()
 		ImgResolution resol = { 1920, 1080 };
 		ROI rect = { 0, 0, 0, 1910, 1000, 1910, 1000, 0 };
 
+		cout << "judgeCode()调用结果： " << endl;
 		int res = judgeCode(yuv, resol, rect);
+		cout << res << endl;
+		cout << "ujudgeCode()调用结果： " << endl;
+		res = ujudgeCode(yuv, resol, rect);
 		cout << res << endl;
 	}
 	return 0;

@@ -2,7 +2,11 @@
 #ifndef _JUDGECODE_H_
 #define _JUDGECODE_H_
 
+#define MAX(a, b) ((a) > (b)? (a): (b))
+#define MIN(a, b) ((a) > (b)? (b): (a))
+
 typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
 
 /**
  * @brief 图片颜色
@@ -64,6 +68,26 @@ typedef struct tagScalar
 }uScalar;
 
 /**
+ * @brief BGR颜色空间
+*/
+typedef struct tagBGR	
+{
+	uint8_t b;
+	uint8_t g;
+	uint8_t r;
+}BGR;
+
+/**
+ * @brief HSV颜色空间
+*/
+typedef struct tagHSV 
+{
+	int h;
+	double s;
+	double v;
+}HSV;
+
+/**
  * @brief opencv中HCV颜色空间的取值范围为：
  * H [0, 179]  色调
  * S [0, 255]  饱和度
@@ -90,8 +114,10 @@ const uScalar yHSVLower = { 26, 43, 46 };     // HSV颜色空间黄色的低阈值
 const uScalar yHSVUpper = { 34, 255, 255 };   // HSV颜色空间黄色的高阈值
 const uScalar gHSVLower = { 35, 43, 46 };     // HSV颜色空间绿色的低阈值
 const uScalar gHSVUpper = { 77, 255, 255 };   // HSV颜色空间绿色的高阈值
-const uScalar rHSVLower = { 0, 43, 46 };      // HSV颜色空间红色的低阈值
-const uScalar rHSVUpper = { 10, 255, 255 };   // HSV颜色空间红色的高阈值
+const uScalar rHSVLower1 = { 0, 43, 46 };     // HSV颜色空间红色的低阈值
+const uScalar rHSVUpper1 = { 10, 255, 255 };  // HSV颜色空间红色的高阈值
+const uScalar rHSVLower2 = { 156, 43, 46 };   // HSV颜色空间红色的低阈值
+const uScalar rHSVUpper2 = { 180, 255, 255 }; // HSV颜色空间红色的高阈值
 
 /**
  * @brief 健康码颜色判断API
@@ -102,5 +128,6 @@ const uScalar rHSVUpper = { 10, 255, 255 };   // HSV颜色空间红色的高阈值
  * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
 */
 int judgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code = U_YUV_NV12);
+int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code = U_YUV_NV12);
 
 #endif // !_JUDGECODE_H_
