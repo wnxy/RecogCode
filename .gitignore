@@ -1,0 +1,13 @@
+# 忽略 .vs文件夹
+.vs/
+# 忽略 x64文件夹
+x64/
+# 忽略项目工程文件
+*.sln
+# 忽略CodeRYGRecognition文件夹下的项目文件
+CodeRYGRecognition/*.vcxproj
+CodeRYGRecognition/*.filters
+CodeRYGRecognition/*.user
+
+
+CodeRYGRecognition/x64/
