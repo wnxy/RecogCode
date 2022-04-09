@@ -62,9 +62,9 @@ typedef struct tagImgResolution
 */
 typedef struct tagScalar
 {
-	double v1;
-	double v2;
-	double v3;
+	long v1;
+	long v2;
+	long v3;
 }uScalar;
 
 /**
@@ -120,14 +120,34 @@ const uScalar rHSVLower2 = { 156, 43, 46 };   // HSV颜色空间红色的低阈值
 const uScalar rHSVUpper2 = { 180, 255, 255 }; // HSV颜色空间红色的高阈值
 
 /**
- * @brief 健康码颜色判断API
- * @param srcframe YUV420SP格式的图片数据（NV12）
+ * @brief 健康码颜色判断API，opencv实现，使用时需要安装opencv环境
+ * @param srcframe YUV格式的图片数据
  * @param resol 图像分辨率
  * @param rect 需要识别颜色的区域
  * @param code 图像数据的传输格式, 默认为YUV420SP NV12
  * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
 */
 int judgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code = U_YUV_NV12);
+
+/**
+ * @brief 健康码颜色判断API，c++实现
+ * @param srcframe YUV格式的图片数据
+ * @param resol 图像分辨率
+ * @param rect 需要识别颜色的区域
+ * @param code 图像数据的传输格式, 默认为YUV420SP NV12
+ * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
+*/
 int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code = U_YUV_NV12);
+
+/**
+ * @brief 健康码颜色判断API，c++实现，需要提供对比底色
+ * @param srcframe YUV格式的图片数据
+ * @param resol 图像分辨率
+ * @param rect 需要识别颜色的区域
+ * @param maskROI 底色区域
+ * @param code 图像数据的传输格式，默认为YUV420SP NV12
+ * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
+*/
+int ujudgeCodeDMask(uint8_t* srcframe, ImgResolution& resol, ROI& rect, ROI& maskROI, int code = U_YUV_NV12);
 
 #endif // !_JUDGECODE_H_

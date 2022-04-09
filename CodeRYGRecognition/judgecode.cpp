@@ -1,12 +1,12 @@
 #include "judgecode.h"
 #include <cstring>
 #include <algorithm>
+#include <cmath>
 
-#define OPENCV
-#ifdef OPENCV
 #include <opencv.hpp>
 #include <opencv2/imgproc/imgproc_c.h>
-#endif // OPENCV
+
+#include <iostream>
 
 static inline int max(long x, long y)
 {
@@ -222,96 +222,76 @@ void cvtColor_YUV2BGR_NV12(uint8_t* yuyv, uint8_t* rgb, uint32_t width, uint32_t
 	}
 }
 
-
 /**
- * @brief 健康码颜色判断API
- * @param srcframe YUV420SP格式的图片数据（NV12）
+ * @brief 计算平均掩模值
+ * @param srcframe 源图像数据BGR格式
  * @param resol 图像分辨率
- * @param rect 需要识别颜色的区域
- * @param code 图像数据的传输格式，默认为YUV420SP NV12
- * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
+ * @param maskROI 底色区域
+ * @return BGR形式掩模
 */
-int judgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
+uScalar calcMask(uint8_t* srcframe, ImgResolution& resol, ROI& maskROI)
 {
+	//std::cout << "calcMask() " << std::endl;
 	if (srcframe == NULL)
 	{
-		return ERROR;
+		return {0, 0, 0};
 	}
-	const int framesize = resol.width * resol.height * 3 / 2;
-	cv::Mat yuvImg;
-	yuvImg.create(resol.height * 3 / 2, resol.width, CV_8UC1);
-	memcpy(yuvImg.data, srcframe, framesize * sizeof(uint8_t));
-	cv::Mat rgbImg, hsvImg;
-	switch (code)
+	long b = 0, g = 0, r = 0, sum = 0;
+	for (int i = 0; i < resol.height; ++i)
 	{
-	case NONE:
-	{
-		return ERROR;
-	}
-	case U_YUV_NV12:
-	{
-		cvtColor(yuvImg, rgbImg, CV_YUV2BGR_NV12);
-		break;
-	}
-	default:
-		break;
-	}
-
-	cvtColor(rgbImg, hsvImg, cv::ColorConversionCodes::COLOR_BGR2HSV);
-
-	// 分别统计红色像素点、绿色像素点、黄色像素点的数量
-	long r_point = 0, g_point = 0, y_point = 0;
-
-	int height = rgbImg.rows;
-	int width = rgbImg.cols;
-	for (int i = 0; i < height; i++)
-	{
-		for (int j = 0; j < width; j++)
+		for (int j = 0; j < resol.width; ++j)
 		{
-			uPoint p = { i, j };
-			int index = i * width + j;
-			int h = (int)hsvImg.data[3 * index + 0];
-			int s = (int)hsvImg.data[3 * index + 1];
-			int v = (int)hsvImg.data[3 * index + 2];
-			uScalar hsv = { h, s, v };
-			if (isPointInROI(rect, p))
+			uPoint p = { j, i };
+			if (isPointInROI(maskROI, p))
 			{
-				if (isScalarRange(yHSVLower, yHSVUpper, hsv) || isScalarRange(oHSVLower, oHSVUpper, hsv))        // 判断像素点是否为黄色或者橙色
-				{
-					++y_point;
-				}
-				else if (isScalarRange(gHSVLower, gHSVUpper, hsv))   // 判断像素点是否为绿色
-				{
-					++g_point;
-				}
-				else if (isScalarRange(rHSVLower1, rHSVUpper1, hsv) || isScalarRange(rHSVLower2, rHSVUpper2, hsv))   // 判断像素点是否为红色
-				{
-					++r_point;
-				}
+				++sum;
+				int index = i * resol.width + j;
+				b += srcframe[index * 3 + 0];
+				g += srcframe[index * 3 + 1];
+				r += srcframe[index * 3 + 2];
 			}
 		}
 	}
-	std::cout << "黄色像素点：" << y_point << std::endl;
-	std::cout << "绿色像素点：" << g_point << std::endl;
-	std::cout << "红色像素点：" << r_point << std::endl;
-	if (y_point + g_point + r_point == 0) return ERROR;
-	else
+	uScalar bgr;
+	bgr.v1 = 255 - (b / sum);     // Blue分量的平均值
+	bgr.v2 = 255 - (g / sum);     // Green分量的平均值
+	bgr.v3 = 255 - (r / sum);     // Red分量的平均值
+	return bgr;
+}
+
+/**
+ * @brief 去除BGR图像特定区域中的掩模
+ * @param rgb BGR格式图像数据
+ * @param width 图像宽
+ * @param height 图像高
+ * @param maskROI ROI区域
+ * @param mask BGR格式掩膜
+*/
+void clearMask(uint8_t* rgb, uint32_t width, uint32_t height, ROI& rect, uScalar& mask)
+{
+	for (int i = 0; i < height; ++i)
 	{
-		int tmp = maxThree(y_point, g_point, r_point);
-		if (y_point == tmp) return YELLOW;
-		else if (g_point == tmp) return GREEN;
-		else if (r_point == tmp) return RED;
-		else return ERROR;
+		for (int j = 0; j < width; ++j)
+		{
+			uPoint p = { j, i };
+			if (isPointInROI(rect, p))
+			{
+				int index = i * width + j;
+				rgb[index * 3 + 0] = (rgb[index * 3 + 0] + mask.v1) % 255;
+				rgb[index * 3 + 1] = (rgb[index * 3 + 1] + mask.v2) % 255;
+				rgb[index * 3 + 2] = (rgb[index * 3 + 2] + mask.v3) % 255;
+			}
+		}
 	}
 }
 
 /**
- * @brief 
- * @param srcframe 
- * @param resol 
- * @param rect 
- * @param code 
- * @return 
+ * @brief 健康码颜色判断API，c++实现
+ * @param srcframe YUV格式的图片数据
+ * @param resol 图像分辨率
+ * @param rect 需要识别颜色的区域
+ * @param code 图像数据的传输格式，默认为YUV420SP NV12
+ * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
 */
 int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 {
@@ -340,7 +320,7 @@ int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 		//tmpImg.create(resol.height * 3, resol.width, CV_8UC3);
 		//memcpy(tmpImg.data, rgbImg, rgbframesize * sizeof(uint8_t));
 		//cv::imshow("RGB图像自转换", tmpImg);
-		//cv::waitKey(0);
+		//cv::waitKey(0);is
 		break;
 	}
 	default:
@@ -363,7 +343,7 @@ int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 	{
 		for (int j = 0; j < width; j++)
 		{
-			uPoint p = { i, j };
+			uPoint p = { j, i };
 			int index = i * width + j;
 			int h = (int)hsvImg[3 * index + 0];
 			int s = (int)hsvImg[3 * index + 1];
@@ -386,9 +366,9 @@ int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 			}
 		}
 	}
-	std::cout << "黄色像素点：" << y_point << std::endl;
-	std::cout << "绿色像素点：" << g_point << std::endl;
-	std::cout << "红色像素点：" << r_point << std::endl;
+	//std::cout << "黄色像素点：" << y_point << std::endl;
+	//std::cout << "绿色像素点：" << g_point << std::endl;
+	//std::cout << "红色像素点：" << r_point << std::endl;
 	if (y_point + g_point + r_point == 0) return ERROR;
 	else
 	{
@@ -401,18 +381,101 @@ int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 }
 
 /**
- * @brief 
- * @param srcframe 
- * @param resol 
- * @param rect 
- * @param code 
- * @return 
+ * @brief 健康码颜色判断API，c++实现，需要提供对比底色
+ * @param srcframe YUV格式的图片数据
+ * @param resol 图像分辨率
+ * @param rect 需要识别颜色的区域
+ * @param maskROI 底色区域
+ * @param code 图像数据的传输格式，默认为YUV420SP NV12
+ * @return 1: Red Code, 2: Green Code, 3: Yellow Code, 0: Error
 */
-//int judgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
-//{
-//#ifdef OPENCV
-//	return judgeCodeOpencv(srcframe, resol, rect, code);
-//#elif
-//	return judgeCodeC(srcframe, resol, rect, code);
-//#endif // OPENCV
-//}
+int ujudgeCodeDMask(uint8_t* srcframe, ImgResolution& resol, ROI& rect, ROI& maskROI, int code)
+{
+	if (srcframe == NULL)
+	{
+		return ERROR;
+	}
+	const int yuvframesize = resol.width * resol.height * 3 / 2;
+	const int rgbframesize = resol.width * resol.height * 3;
+	const int hsvframesize = resol.width * resol.height * 3;
+
+	uint8_t* rgbImg = new uint8_t[rgbframesize];
+	memset(rgbImg, 0, rgbframesize);
+	uint8_t* hsvImg = new uint8_t[hsvframesize];
+	memset(hsvImg, 0, hsvframesize);
+	switch (code)
+	{
+	case NONE:
+	{
+		return ERROR;
+	}
+	case U_YUV_NV12:
+	{
+		cvtColor_YUV2BGR_NV12(srcframe, rgbImg, resol.width, resol.height);
+		//cv::Mat tmpImg;
+		//tmpImg.create(resol.height * 3, resol.width, CV_8UC3);
+		//memcpy(tmpImg.data, rgbImg, rgbframesize * sizeof(uint8_t));
+		//cv::imshow("RGB图像自转换", tmpImg);
+		//cv::waitKey(0);
+		break;
+	}
+	default:
+		break;
+	}
+	uScalar bgrMask = calcMask(rgbImg, resol, maskROI);
+	//std::cout << "bgrMask = " << bgrMask.v1 << " " << bgrMask.v2 << " " << bgrMask.v3 << std::endl;
+	clearMask(rgbImg, resol.width, resol.height, rect, bgrMask);
+	cvtColor_RGB2HSV(rgbImg, hsvImg, resol.width, resol.height);
+	//cv::Mat tmpImg1;
+	//tmpImg1.create(resol.height * 3, resol.width, CV_8UC3);
+	//memcpy(tmpImg1.data, rgbImg, rgbframesize * sizeof(uint8_t));
+	//cv::imshow("HSV图像自转换", tmpImg1);
+	//cv::waitKey(0);
+
+	int height = resol.height;
+	int width = resol.width;
+	// 统计计算掩模均值
+
+	// 分别统计红色像素点、绿色像素点、黄色像素点的数量
+	long r_point = 0, g_point = 0, y_point = 0;
+
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			uPoint p = { j, i };
+			int index = i * width + j;
+			int h = (int)hsvImg[3 * index + 0];
+			int s = (int)hsvImg[3 * index + 1];
+			int v = (int)hsvImg[3 * index + 2];
+			uScalar hsv = { h, s, v };
+			if (isPointInROI(rect, p))
+			{
+				if (isScalarRange(yHSVLower, yHSVUpper, hsv) || isScalarRange(oHSVLower, oHSVUpper, hsv))        // 判断像素点是否为黄色或者橙色
+				{
+					++y_point;
+				}
+				else if (isScalarRange(gHSVLower, gHSVUpper, hsv))   // 判断像素点是否为绿色
+				{
+					++g_point;
+				}
+				else if (isScalarRange(rHSVLower1, rHSVUpper1, hsv) || isScalarRange(rHSVLower2, rHSVUpper2, hsv))   // 判断像素点是否为红色
+				{
+					++r_point;
+				}
+			}
+		}
+	}
+	//std::cout << "黄色像素点：" << y_point << std::endl;
+	//std::cout << "绿色像素点：" << g_point << std::endl;
+	//std::cout << "红色像素点：" << r_point << std::endl;
+	if (y_point + g_point + r_point == 0) return ERROR;
+	else
+	{
+		int tmp = maxThree(y_point, g_point, r_point);
+		if (y_point == tmp) return YELLOW;
+		else if (g_point == tmp) return GREEN;
+		else if (r_point == tmp) return RED;
+		else return ERROR;
+	}
+}

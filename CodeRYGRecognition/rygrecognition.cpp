@@ -72,7 +72,7 @@ int loadframe(uint8_t* yuvInput, FILE* hInputYUVFile, uint32_t frmIdx, uint32_t 
 int openfile()
 {
 	errno_t err;
-	err = fopen_s(&infp, "20220319121958&1920&1080&.yuv", "rb");
+	err = fopen_s(&infp, "20220319121938&1920&1080&.yuv", "rb");
 	if (!infp)
 	{
 		printf("open in file failed\n");
@@ -246,13 +246,14 @@ int testU()
 		printf("成功读取YUV图像\n");
 
 		ImgResolution resol = { 1920, 1080 };
-		ROI rect = { 0, 0, 0, 1910, 1000, 1910, 1000, 0 };
-
-		cout << "judgeCode()调用结果： " << endl;
-		int res = judgeCode(yuv, resol, rect);
-		cout << res << endl;
+		//ROI rect = { 0, 0, 0, 1910, 1000, 1910, 1000, 0 };
+		ROI rect1 = { 1506, 196, 1620, 500, 1400, 775, 1130, 460 };   // 938图像对应的ROI区域
+		ROI maskROI = { 1258, 186, 1326, 218, 1262, 288, 1122, 240 };   // 938图像对应的maskROI区域
+		//cout << "judgeCode()调用结果： " << endl;
+		//int res = judgeCode(yuv, resol, rect1);
+		//cout << res << endl;
 		cout << "ujudgeCode()调用结果： " << endl;
-		res = ujudgeCode(yuv, resol, rect);
+		int res = ujudgeCodeDMask(yuv, resol, rect1, maskROI);
 		cout << res << endl;
 	}
 	return 0;
