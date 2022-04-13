@@ -1,12 +1,16 @@
 #include "judgecode.h"
-#include <cstring>
-#include <algorithm>
-#include <cmath>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stdio.h>
+//#include <cstring>
+//#include <algorithm>
+//#include <cmath>
 
-#include <opencv.hpp>
-#include <opencv2/imgproc/imgproc_c.h>
-
-#include <iostream>
+//#include <opencv.hpp>
+//#include <opencv2/imgproc/imgproc_c.h>
+//
+//#include <iostream>
 
 static inline int max(long x, long y)
 {
@@ -182,8 +186,10 @@ void cvtColor_YUV2BGR_NV12(uint8_t* yuyv, uint8_t* rgb, uint32_t width, uint32_t
 	uint8_t y, u, v;
 	int r, g, b, nv_index = 0, i, j;
 
-	for (i = 0; i < height; i++) {
-		for (j = 0; j < width; j++) {
+	for (i = 0; i < height; i++) 
+	{
+		for (j = 0; j < width; j++) 
+		{
 			//nv_index = (rgb_index / 2 - width / 2 * ((i + 1) / 2)) * 2;
 			nv_index = i / 2 * width + j - j % 2;
 
@@ -303,9 +309,9 @@ int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 	const int rgbframesize = resol.width * resol.height * 3;
 	const int hsvframesize = resol.width * resol.height * 3;
 	
-	uint8_t* rgbImg = new uint8_t[rgbframesize];
+	uint8_t* rgbImg = (uint8_t*)malloc(rgbframesize);
 	memset(rgbImg, 0, rgbframesize);
-	uint8_t* hsvImg = new uint8_t[hsvframesize];
+	uint8_t* hsvImg = (uint8_t*)malloc(hsvframesize);
 	memset(hsvImg, 0, hsvframesize);
 	switch (code)
 	{
@@ -366,9 +372,14 @@ int ujudgeCode(uint8_t* srcframe, ImgResolution& resol, ROI& rect, int code)
 			}
 		}
 	}
+	free(rgbImg);
+	free(hsvImg);
 	//std::cout << "黄色像素点：" << y_point << std::endl;
 	//std::cout << "绿色像素点：" << g_point << std::endl;
 	//std::cout << "红色像素点：" << r_point << std::endl;
+	printf("黄色像素点：%d\n", y_point);
+	printf("绿色像素点：%d\n", g_point);
+	printf("红色像素点：%d\n", r_point);
 	if (y_point + g_point + r_point == 0) return ERROR;
 	else
 	{
@@ -399,9 +410,9 @@ int ujudgeCodeDMask(uint8_t* srcframe, ImgResolution& resol, ROI& rect, ROI& mas
 	const int rgbframesize = resol.width * resol.height * 3;
 	const int hsvframesize = resol.width * resol.height * 3;
 
-	uint8_t* rgbImg = new uint8_t[rgbframesize];
+	uint8_t* rgbImg = (uint8_t*)malloc(rgbframesize);
 	memset(rgbImg, 0, rgbframesize);
-	uint8_t* hsvImg = new uint8_t[hsvframesize];
+	uint8_t* hsvImg = (uint8_t*)malloc(hsvframesize);
 	memset(hsvImg, 0, hsvframesize);
 	switch (code)
 	{
@@ -466,9 +477,14 @@ int ujudgeCodeDMask(uint8_t* srcframe, ImgResolution& resol, ROI& rect, ROI& mas
 			}
 		}
 	}
+	free(rgbImg);
+	free(hsvImg); 
 	//std::cout << "黄色像素点：" << y_point << std::endl;
 	//std::cout << "绿色像素点：" << g_point << std::endl;
 	//std::cout << "红色像素点：" << r_point << std::endl;
+	printf("黄色像素点：%d\n", y_point);
+	printf("绿色像素点：%d\n", g_point);
+	printf("红色像素点：%d\n", r_point);
 	if (y_point + g_point + r_point == 0) return ERROR;
 	else
 	{
